@@ -12,17 +12,26 @@ export const baseTheme = EditorView.baseTheme({
       maxWidth: "min(700px, 95vw)",
       minWidth: "250px",
       maxHeight: "10em",
+      height: "100%",
       listStyle: "none",
       margin: 0,
       padding: 0,
 
-      "& > li": {
-        overflowX: "hidden",
-        textOverflow: "ellipsis",
-        cursor: "pointer",
+      "& > li, & > completion-section": {
         padding: "1px 3px",
         lineHeight: 1.2
       },
+      "& > li": {
+        overflowX: "hidden",
+        textOverflow: "ellipsis",
+        cursor: "pointer"
+      },
+      "& > completion-section": {
+        display: "list-item",
+        borderBottom: "1px solid silver",
+        paddingLeft: "0.5em",
+        opacity: 0.7
+      }
     }
   },
 
@@ -31,9 +40,17 @@ export const baseTheme = EditorView.baseTheme({
     color: "white",
   },
 
+  "&light .cm-tooltip-autocomplete-disabled ul li[aria-selected]": {
+    background: "#777",
+  },
+
   "&dark .cm-tooltip-autocomplete ul li[aria-selected]": {
     background: "#347",
     color: "white",
+  },
+
+  "&dark .cm-tooltip-autocomplete-disabled ul li[aria-selected]": {
+    background: "#444",
   },
 
   ".cm-completionListIncompleteTop:before, .cm-completionListIncompleteBottom:after": {
@@ -48,7 +65,8 @@ export const baseTheme = EditorView.baseTheme({
     padding: "3px 9px",
     width: "max-content",
     maxWidth: `${Info.Width}px`,
-    boxSizing: "border-box"
+    boxSizing: "border-box",
+    whiteSpace: "pre-line"
   },
 
   ".cm-completionInfo.cm-completionInfo-left": { right: "100%" },
@@ -82,7 +100,8 @@ export const baseTheme = EditorView.baseTheme({
     display: "inline-block",
     textAlign: "center",
     paddingRight: ".6em",
-    opacity: "0.6"
+    opacity: "0.6",
+    boxSizing: "content-box"
   },
 
   ".cm-completionIcon-function, .cm-completionIcon-method": {

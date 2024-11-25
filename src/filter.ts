@@ -6,7 +6,8 @@ const enum Penalty {
   Gap = -1100,      // Added for each gap in the match (not counted for by-word matches)
   NotStart = -700,  // The match doesn't start at the start of the word
   CaseFold = -200,  // At least one character needed to be case-folded to match
-  ByWord = -100     // The match is by-word, meaning each char in the pattern matches the start of a word in the string
+  ByWord = -100,    // The match is by-word, meaning each char in the pattern matches the start of a word in the string
+  NotFull = -100,   // Used to push down matches that don't match the pattern fully relative to those that do
 }
 
 const enum Tp { NonWord, Upper, Lower }
@@ -25,6 +26,9 @@ export class FuzzyMatcher {
   precise: number[] = []
   byWord: number[] = []
 
+  score = 0
+  matched: readonly number[] = []
+
   constructor(readonly pattern: string) {
     for (let p = 0; p < pattern.length;) {
       let char = codePointAt(pattern, p), size = codePointSize(char)
@@ -36,26 +40,35 @@ export class FuzzyMatcher {
     this.astral = pattern.length != this.chars.length
   }
 
+  ret(score: number, matched: readonly number[]) {
+    this.score = score
+    this.matched = matched
+    return this
+  }
+
   // Matches a given word (completion) against the pattern (input).
-  // Will return null for no match, and otherwise an array that starts
-  // with the match score, followed by any number of `from, to` pairs
-  // indicating the matched parts of `word`.
+  // Will return a boolean indicating whether there was a match and,
+  // on success, set `this.score` to the score, `this.matched` to an
+  // array of `from, to` pairs indicating the matched parts of `word`.
   //
   // The score is a number that is more negative the worse the match
   // is. See `Penalty` above.
-  match(word: string): number[] | null {
-    if (this.pattern.length == 0) return [0]
+  match(word: string): {score: number, matched: readonly number[]} | null {
+    if (this.pattern.length == 0) return this.ret(Penalty.NotFull, [])
     if (word.length < this.pattern.length) return null
     let {chars, folded, any, precise, byWord} = this
     // For single-character queries, only match when they occur right
     // at the start
     if (chars.length == 1) {
-      let first = codePointAt(word, 0)
-      return first == chars[0] ? [0, 0, codePointSize(first)]
-        : first == folded[0] ? [Penalty.CaseFold, 0, codePointSize(first)] : null
+      let first = codePointAt(word, 0), firstSize = codePointSize(first)
+      let score = firstSize == word.length ? 0 : Penalty.NotFull
+      if (first == chars[0]) {}
+      else if (first == folded[0]) score += Penalty.CaseFold
+      else return null
+      return this.ret(score, [0, firstSize])
     }
     let direct = word.indexOf(this.pattern)
-    if (direct == 0) return [0, 0, this.pattern.length]
+    if (direct == 0) return this.ret(word.length == this.pattern.length ? 0 : Penalty.NotFull, [0, this.pattern.length])
 
     let len = chars.length, anyTo = 0
     if (direct < 0) {
@@ -108,24 +121,46 @@ export class FuzzyMatcher {
     if (byWordTo == len && byWord[0] == 0 && wordAdjacent)
       return this.result(Penalty.ByWord + (byWordFolded ? Penalty.CaseFold : 0), byWord, word)
     if (adjacentTo == len && adjacentStart == 0)
-      return [Penalty.CaseFold - word.length, 0, adjacentEnd]
+      return this.ret(Penalty.CaseFold - word.length + (adjacentEnd == word.length ? 0 : Penalty.NotFull), [0, adjacentEnd])
     if (direct > -1)
-      return [Penalty.NotStart - word.length, direct, direct + this.pattern.length]
+      return this.ret(Penalty.NotStart - word.length, [direct, direct + this.pattern.length])
     if (adjacentTo == len)
-      return [Penalty.CaseFold + Penalty.NotStart - word.length, adjacentStart, adjacentEnd]
+      return this.ret(Penalty.CaseFold + Penalty.NotStart - word.length, [adjacentStart, adjacentEnd])
     if (byWordTo == len)
       return this.result(Penalty.ByWord + (byWordFolded ? Penalty.CaseFold : 0) + Penalty.NotStart +
         (wordAdjacent ? 0 : Penalty.Gap), byWord, word)
-    return chars.length == 2 ? null : this.result((any[0] ? Penalty.NotStart : 0) + Penalty.CaseFold + Penalty.Gap, any, word)
+    return chars.length == 2 ? null
+      : this.result((any[0] ? Penalty.NotStart : 0) + Penalty.CaseFold + Penalty.Gap, any, word)
   }
 
   result(score: number, positions: number[], word: string) {
-    let result = [score - word.length], i = 1
+    let result: number[] = [], i = 0
     for (let pos of positions) {
       let to = pos + (this.astral ? codePointSize(codePointAt(word, pos)) : 1)
-      if (i > 1 && result[i - 1] == pos) result[i - 1] = to
+      if (i && result[i - 1] == pos) result[i - 1] = to
       else { result[i++] = pos; result[i++] = to }
     }
-    return result
+    return this.ret(score - word.length, result)
+  }
+}
+
+
+export class StrictMatcher {
+  matched: readonly number[] = []
+  score: number = 0
+  folded: string
+
+  constructor(readonly pattern: string) {
+    this.folded = pattern.toLowerCase()
+  }
+
+  match(word: string): {score: number, matched: readonly number[]} | null {
+    if (word.length < this.pattern.length) return null
+    let start = word.slice(0, this.pattern.length)
+    let match = start == this.pattern ? 0 : start.toLowerCase() == this.folded ? Penalty.CaseFold : null
+    if (match == null) return null
+    this.matched = [0, start.length]
+    this.score = match + (word.length == this.pattern.length ? 0 : Penalty.NotFull)
+    return this
   }
 }

@@ -3,7 +3,7 @@ import {StateField, StateEffect, ChangeDesc, EditorState, EditorSelection,
         Transaction, TransactionSpec, Text, StateCommand, Prec, Facet, MapMode} from "@codemirror/state"
 import {indentUnit} from "@codemirror/language"
 import {baseTheme} from "./theme"
-import {Completion} from "./completion"
+import {Completion, pickedCompletion} from "./completion"
 
 class FieldPos {
   constructor(public field: number,
@@ -46,10 +46,11 @@ class Snippet {
 
   static parse(template: string) {
     let fields: {seq: number | null, name: string}[] = []
-    let lines = [], positions = [], m
+    let lines = [], positions: FieldPos[] = [], m
     for (let line of template.split(/\r\n?|\n/)) {
-      while (m = /[#$]\{(?:(\d+)(?::([^}]*))?|([^}]*))\}/.exec(line)) {
-        let seq = m[1] ? +m[1] : null, name = m[2] || m[3] || "", found = -1
+      while (m = /[#$]\{(?:(\d+)(?::([^}]*))?|((?:\\[{}]|[^}])*))\}/.exec(line)) {
+        let seq = m[1] ? +m[1] : null, rawName = m[2] || m[3] || "", found = -1
+        let name = rawName.replace(/\\[{}]/g, m => m[1])
         for (let i = 0; i < fields.length; i++) {
           if (seq != null ? fields[i].seq == seq : name ? fields[i].name == name : false) found = i
         }
@@ -61,15 +62,15 @@ class Snippet {
           for (let pos of positions) if (pos.field >= found) pos.field++
         }
         positions.push(new FieldPos(found, lines.length, m.index, m.index + name.length))
-        line = line.slice(0, m.index) + name + line.slice(m.index + m[0].length)
+        line = line.slice(0, m.index) + rawName + line.slice(m.index + m[0].length)
       }
-      for (let esc; esc = /([$#])\\{/.exec(line);) {
-        line = line.slice(0, esc.index) + esc[1] + "{" + line.slice(esc.index + esc[0].length)
-        for (let pos of positions) if (pos.line == lines.length && pos.from > esc.index) {
+      line = line.replace(/\\([{}])/g, (_, brace, index) => {
+        for (let pos of positions) if (pos.line == lines.length && pos.from > index) {
           pos.from--
           pos.to--
         }
-      }
+        return brace
+      })
       lines.push(line)
     }
     return new Snippet(lines, positions)
@@ -161,20 +162,21 @@ function fieldSelection(ranges: readonly FieldRange[], field: number) {
 /// numbers to placeholders (`${1}` or `${1:defaultText}`) to provide
 /// a custom order.
 ///
-/// To include a literal `${` or `#{` in your template, put a
-/// backslash after the dollar or hash and before the brace (`$\\{`).
-/// This will be removed and the sequence will not be interpreted as a
-/// placeholder.
+/// To include a literal `{` or `}` in your template, put a backslash
+/// in front of it. This will be removed and the brace will not be
+/// interpreted as indicating a placeholder.
 export function snippet(template: string) {
   let snippet = Snippet.parse(template)
-  return (editor: {state: EditorState, dispatch: (tr: Transaction) => void}, _completion: Completion, from: number, to: number) => {
+  return (editor: {state: EditorState, dispatch: (tr: Transaction) => void}, completion: Completion | null, from: number, to: number) => {
     let {text, ranges} = snippet.instantiate(editor.state, from)
+    let {main} = editor.state.selection
     let spec: TransactionSpec = {
-      changes: {from, to, insert: Text.of(text)},
-      scrollIntoView: true
+      changes: {from, to: to == main.from ? main.to : to, insert: Text.of(text)},
+      scrollIntoView: true,
+      annotations: completion ? [pickedCompletion.of(completion), Transaction.userEvent.of("input.complete")] : undefined
     }
     if (ranges.length) spec.selection = fieldSelection(ranges, 0)
-    if (ranges.length > 1) {
+    if (ranges.some(r => r.field > 0)) {
       let active = new ActiveSnippet(ranges, 0)
       let effects: StateEffect<unknown>[] = spec.effects = [setActive.of(active)]
       if (editor.state.field(snippetState, false) === undefined)
@@ -191,7 +193,8 @@ function moveField(dir: 1 | -1): StateCommand {
     let next = active.active + dir, last = dir > 0 && !active.ranges.some(r => r.field == next + dir)
     dispatch(state.update({
       selection: fieldSelection(active.ranges, next),
-      effects: setActive.of(last ? null : new ActiveSnippet(active.ranges, next))
+      effects: setActive.of(last ? null : new ActiveSnippet(active.ranges, next)),
+      scrollIntoView: true
     }))
     return true
   }
@@ -210,6 +213,20 @@ export const nextSnippetField = moveField(1)
 
 /// Move to the previous snippet field, if available.
 export const prevSnippetField = moveField(-1)
+
+/// Check if there is an active snippet with a next field for
+/// `nextSnippetField` to move to.
+export function hasNextSnippetField(state: EditorState) {
+  let active = state.field(snippetState, false)
+  return !!(active && active.ranges.some(r => r.field == active!.active + 1))
+}
+
+/// Returns true if there is an active snippet and a previous field
+/// for `prevSnippetField` to move to.
+export function hasPrevSnippetField(state: EditorState) {
+  let active = state.field(snippetState, false)
+  return !!(active && active.active > 0)
+}
 
 const defaultSnippetKeymap = [
   {key: "Tab", run: nextSnippetField, shift: prevSnippetField},
@@ -242,7 +259,9 @@ const snippetPointerHandler = EditorView.domEventHandlers({
     if (!match || match.field == active.active) return false
     view.dispatch({
       selection: fieldSelection(active.ranges, match.field),
-      effects: setActive.of(active.ranges.some(r => r.field > match!.field) ? new ActiveSnippet(active.ranges, match.field) : null)
+      effects: setActive.of(active.ranges.some(r => r.field > match!.field)
+        ? new ActiveSnippet(active.ranges, match.field) : null),
+      scrollIntoView: true
     })
     return true
   }

@@ -3,19 +3,26 @@ import {keymap, KeyBinding} from "@codemirror/view"
 import {Completion, Option} from "./completion"
 import {completionState, State, setSelectedEffect} from "./state"
 import {CompletionConfig, completionConfig} from "./config"
-import {completionPlugin, moveCompletionSelection, acceptCompletion, startCompletion, closeCompletion} from "./view"
+import {completionPlugin, moveCompletionSelection, acceptCompletion,
+        startCompletion, closeCompletion, commitCharacters} from "./view"
 import {baseTheme} from "./theme"
+import {defaultCompletionTooltip} from "./tooltip"
 
-export {snippet, snippetCompletion, nextSnippetField, prevSnippetField, clearSnippet, snippetKeymap} from "./snippet"
-export {Completion, CompletionContext, CompletionSource, CompletionResult, pickedCompletion,
-        completeFromList, ifIn, ifNotIn, insertCompletionText} from "./completion"
+export {snippet, snippetCompletion, nextSnippetField, prevSnippetField,
+        hasNextSnippetField, hasPrevSnippetField, clearSnippet, snippetKeymap} from "./snippet"
+export {Completion, CompletionInfo, CompletionSection, CompletionContext, CompletionSource, CompletionResult, 
+        pickedCompletion, completeFromList, ifIn, ifNotIn, insertCompletionText, Option} from "./completion"
 export {startCompletion, closeCompletion, acceptCompletion, moveCompletionSelection} from "./view"
 export {completeAnyWord} from "./word"
 export {CloseBracketConfig, closeBrackets, closeBracketsKeymap, deleteBracketPair, insertBracket} from "./closebrackets"
+export { CompletionState, applyCompletion } from "./state";
+export {completionTooltip} from "./tooltip"
 
 /// Returns an extension that enables autocompletion.
 export function autocompletion(config: CompletionConfig = {}): Extension {
   return [
+    defaultCompletionTooltip,
+    commitCharacters,
     completionState,
     completionConfig.of(config),
     completionPlugin,
@@ -26,7 +33,7 @@ export function autocompletion(config: CompletionConfig = {}): Extension {
 
 /// Basic keybindings for autocompletion.
 ///
-///  - Ctrl-Space: [`startCompletion`](#autocomplete.startCompletion)
+///  - Ctrl-Space (and Alt-\` on macOS): [`startCompletion`](#autocomplete.startCompletion)
 ///  - Escape: [`closeCompletion`](#autocomplete.closeCompletion)
 ///  - ArrowDown: [`moveCompletionSelection`](#autocomplete.moveCompletionSelection)`(true)`
 ///  - ArrowUp: [`moveCompletionSelection`](#autocomplete.moveCompletionSelection)`(false)`
@@ -35,12 +42,14 @@ export function autocompletion(config: CompletionConfig = {}): Extension {
 ///  - Enter: [`acceptCompletion`](#autocomplete.acceptCompletion)
 export const completionKeymap: readonly KeyBinding[] = [
   {key: "Ctrl-Space", run: startCompletion},
+  {mac: "Alt-`", run: startCompletion},
   {key: "Escape", run: closeCompletion},
   {key: "ArrowDown", run: moveCompletionSelection(true)},
   {key: "ArrowUp", run: moveCompletionSelection(false)},
   {key: "PageDown", run: moveCompletionSelection(true, "page")},
   {key: "PageUp", run: moveCompletionSelection(false, "page")},
-  {key: "Enter", run: acceptCompletion}
+  {key: "Enter", run: acceptCompletion},
+  {key: "Tab", run: acceptCompletion}
 ]
 
 const completionKeymapExt = Prec.highest(keymap.computeN([completionConfig], state => 
@@ -52,7 +61,7 @@ const completionKeymapExt = Prec.highest(keymap.computeN([completionConfig], sta
 /// returns `null`.
 export function completionStatus(state: EditorState): null | "active" | "pending" {
   let cState = state.field(completionState, false)
-  return cState && cState.active.some(a => a.state == State.Pending) ? "pending"
+  return cState && cState.active.some(a => a.isPending) ? "pending"
     : cState && cState.active.some(a => a.state != State.Inactive) ? "active" : null
 }
 
@@ -61,7 +70,7 @@ const completionArrayCache: WeakMap<readonly Option[], readonly Completion[]> = 
 /// Returns the available completions as an array.
 export function currentCompletions(state: EditorState): readonly Completion[] {
   let open = state.field(completionState, false)?.open
-  if (!open) return []
+  if (!open || open.disabled) return []
   let completions = completionArrayCache.get(open.options)
   if (!completions)
     completionArrayCache.set(open.options, completions = open.options.map(o => o.completion))
@@ -71,14 +80,14 @@ export function currentCompletions(state: EditorState): readonly Completion[] {
 /// Return the currently selected completion, if any.
 export function selectedCompletion(state: EditorState): Completion | null {
   let open = state.field(completionState, false)?.open
-  return open && open.selected >= 0 ? open.options[open.selected].completion : null
+  return open && !open.disabled && open.selected >= 0 ? open.options[open.selected].completion : null
 }
 
 /// Returns the currently selected position in the active completion
 /// list, or null if no completions are active.
 export function selectedCompletionIndex(state: EditorState): number | null {
   let open = state.field(completionState, false)?.open
-  return open && open.selected >= 0 ? open.selected : null
+  return open && !open.disabled && open.selected >= 0 ? open.selected : null
 }
 
 /// Create an effect that can be attached to a transaction to change

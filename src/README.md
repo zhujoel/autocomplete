@@ -1,5 +1,9 @@
 @Completion
 
+@CompletionInfo
+
+@CompletionSection
+
 @autocompletion
 
 @completionStatus
@@ -52,7 +56,11 @@
 
 @nextSnippetField
 
+@hasNextSnippetField
+
 @prevSnippetField
+
+@hasPrevSnippetField
 
 @clearSnippet
 

@@ -11,7 +11,7 @@ import {syntaxTree} from "@codemirror/language"
 export interface CloseBracketConfig {
   /// The opening brackets to close. Defaults to `["(", "[", "{", "'",
   /// '"']`. Brackets may be single characters or a triple of quotes
-  /// (as in `"''''"`).
+  /// (as in `"'''"`).
   brackets?: string[]
   /// Characters in front of which newly opened brackets are
   /// automatically closed. Closing always happens in front of
@@ -34,9 +34,6 @@ const closeBracketEffect = StateEffect.define<number>({
     return mapped == null ? undefined : mapped
   }
 })
-const skipBracketEffect = StateEffect.define<number>({
-  map(value, mapping) { return mapping.mapPos(value) }
-})
 
 const closedBracket = new class extends RangeValue {}
 closedBracket.startSide = 1; closedBracket.endSide = -1
@@ -44,17 +41,13 @@ closedBracket.startSide = 1; closedBracket.endSide = -1
 const bracketState = StateField.define<RangeSet<typeof closedBracket>>({
   create() { return RangeSet.empty },
   update(value, tr) {
-    if (tr.selection) {
-      let lineStart = tr.state.doc.lineAt(tr.selection.main.head).from
-      let prevLineStart = tr.startState.doc.lineAt(tr.startState.selection.main.head).from
-      if (lineStart != tr.changes.mapPos(prevLineStart, -1))
-        value = RangeSet.empty
-    }
     value = value.map(tr.changes)
-    for (let effect of tr.effects) {
-      if (effect.is(closeBracketEffect)) value = value.update({add: [closedBracket.range(effect.value, effect.value + 1)]})
-      else if (effect.is(skipBracketEffect)) value = value.update({filter: from => from != effect.value})
+    if (tr.selection) {
+      let line = tr.state.doc.lineAt(tr.selection.main.head)
+      value = value.update({filter: from => from >= line.from && from <= line.to})
     }
+    for (let effect of tr.effects) if (effect.is(closeBracketEffect))
+      value = value.update({add: [closedBracket.range(effect.value, effect.value + 1)]})
     return value
   }
 })
@@ -181,14 +174,15 @@ function handleOpen(state: EditorState, open: string, close: string, closeBefore
 }
 
 function handleClose(state: EditorState, _open: string, close: string) {
-  let dont = null, moved = state.selection.ranges.map(range => {
-    if (range.empty && nextChar(state.doc, range.head) == close) return EditorSelection.cursor(range.head + close.length)
-    return dont = range
+  let dont = null, changes = state.changeByRange(range => {
+    if (range.empty && nextChar(state.doc, range.head) == close)
+      return {changes: {from: range.head, to: range.head + close.length, insert: close},
+              range: EditorSelection.cursor(range.head + close.length)}
+    return dont = {range}
   })
-  return dont ? null : state.update({
-    selection: EditorSelection.create(moved, state.selection.mainIndex),
+  return dont ? null : state.update(changes, {
     scrollIntoView: true,
-    effects: state.selection.ranges.map(({from}) => skipBracketEffect.of(from))
+    userEvent: "input.type"
   })
 }
 
@@ -209,8 +203,9 @@ function handleSame(state: EditorState, token: string, allowTriple: boolean, con
                 range: EditorSelection.cursor(pos + token.length)}
       } else if (closedBracketAt(state, pos)) {
         let isTriple = allowTriple && state.sliceDoc(pos, pos + token.length * 3) == token + token + token
-        return {range: EditorSelection.cursor(pos + token.length * (isTriple ? 3 : 1)),
-                effects: skipBracketEffect.of(pos)}
+        let content = isTriple ? token + token + token : token
+        return {changes: {from: pos, to: pos + content.length, insert: content},
+                range: EditorSelection.cursor(pos + content.length)}
       }
     } else if (allowTriple && state.sliceDoc(pos - 2 * token.length, pos) == token + token &&
                (start = canStartStringAt(state, pos - 2 * token.length, stringPrefixes)) > -1 &&

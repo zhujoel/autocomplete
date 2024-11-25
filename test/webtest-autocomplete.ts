@@ -37,15 +37,18 @@ class Runner {
       state: EditorState.create({
         doc: spec.doc,
         selection,
-        extensions: [autocompletion({override: spec.sources}), EditorState.allowMultipleSelections.of(true)]
+        extensions: [
+          autocompletion({override: spec.sources, interactionDelay: 0, updateSyncTime: 40, activateOnTypingDelay: 10}),
+          EditorState.allowMultipleSelections.of(true)
+        ]
       }),
       parent: document.querySelector("#workspace")! as HTMLElement,
-      dispatch: tr => {
-        if (syncing && syncing.get(tr.state) === syncing.value) {
+      dispatchTransactions: trs => {
+        if (syncing && syncing.get(trs[trs.length - 1].state) === syncing.value) {
           syncing.resolve()
           syncing = null
         }
-        view.update([tr])
+        view.update(trs)
       }
     })
     let sync = (get: (state: EditorState) => any, value: any) => new Promise<void>((resolve, reject) => {
@@ -288,6 +291,38 @@ describe("autocomplete", () => {
       ist(view.dom.querySelector(".cm-tooltip"), dialog)
     })
 
+    run.test("replaces entire selected ranges", {
+      sources: [from("one hey")],
+      doc: "hello world",
+      selection: EditorSelection.single(1, 5)
+    }, async (view, sync) => {
+      startCompletion(view)
+      await sync(options, "hey")
+      acceptCompletion(view)
+      ist(view.state.doc.toString(), "hey world")
+    })
+
+    run.test("replaces inverted ranges", {
+      sources: [from("one hey")],
+      doc: "hello world",
+      selection: EditorSelection.single(5, 1)
+    }, async (view, sync) => {
+      startCompletion(view)
+      await sync(options, "hey")
+      acceptCompletion(view)
+      ist(view.state.doc.toString(), "hey world")
+    })
+
+    run.test("can cover range beyond cursor", {
+      sources: [cx => ({from: 0, to: 4, options: [{label: "brrrr"}]})],
+      doc: "brrr"
+    }, async (view, sync) => {
+      startCompletion(view)
+      await sync(options, "brrrr")
+      acceptCompletion(view)
+      ist(view.state.doc.toString(), "brrrr")
+    })
+
     run.test("complete from list", {sources: [once(completeFromList(["one", "two", "three"]))], doc: "t"}, async (view, sync) => {
       startCompletion(view)
       await sync(options, "three two")
@@ -355,7 +390,6 @@ describe("autocomplete", () => {
     }, async (view, sync) => {
       startCompletion(view)
       await sync(options, "okay")
-      await sleep(80)
       acceptCompletion(view)
       ist(view.state.doc.toString(), "okay\na")
     })
@@ -371,6 +405,17 @@ describe("autocomplete", () => {
       ist(options(view.state), "aha")
     })
 
+    run.test("preserves completion position when changes happen", {
+      sources: [from("pow")],
+      doc: "\n\n",
+      selection: 2
+    }, async (view, sync) => {
+      startCompletion(view)
+      await sync(options, "pow")
+      view.dispatch({changes: {from: 0, insert: "woooooo"}})
+      acceptCompletion(view)
+      ist(view.state.doc.toString(), "woooooo\n\npow")
+    })
     return run.finish()
   })
 })

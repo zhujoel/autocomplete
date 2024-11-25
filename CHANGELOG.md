@@ -1,3 +1,273 @@
+## 6.18.4 (2024-12-17)
+
+### Bug fixes
+
+Align the behavior of snippet completions with text completions in that they overwrite the selected text.
+
+## 6.18.3 (2024-11-13)
+
+### Bug fixes
+
+Backspacing to the start of the completed range will no longer close the completion tooltip when it was triggered implicitly by typing the character before that range.
+
+## 6.18.2 (2024-10-30)
+
+### Bug fixes
+
+Don't immediately show synchronously updated completions when there are some sources that still need to return.
+
+## 6.18.1 (2024-09-14)
+
+### Bug fixes
+
+Fix an issue where `insertCompletionText` would get confused about the length of the inserted text when it contained CRLF line breaks, and create an invalid selection.
+
+Add Alt-Backtick as additional binding on macOS, where IME can take over Ctrl-Space.
+
+## 6.18.0 (2024-08-05)
+
+### Bug fixes
+
+Style the info element so that newlines are preserved, to make it easier to display multi-line info from a string source.
+
+### New features
+
+When registering an `abort` handler for a completion query, you can now use the `onDocChange` option to indicate that your query should be aborted as soon as the document changes while it is running.
+
+## 6.17.0 (2024-07-03)
+
+### Bug fixes
+
+Fix an issue where completions weren't properly reset when starting a new completion through `activateOnCompletion`.
+
+### New features
+
+`CompletionContext` objects now have a `view` property that holds the editor view when the query context has a view available.
+
+## 6.16.3 (2024-06-19)
+
+### Bug fixes
+
+Avoid adding an `aria-autocomplete` attribute to the editor when there are no active sources active.
+
+## 6.16.2 (2024-05-31)
+
+### Bug fixes
+
+Allow backslash-escaped closing braces inside snippet field names/content.
+
+## 6.16.1 (2024-05-29)
+
+### Bug fixes
+
+Fix a bug where multiple backslashes before a brace in a snippet were all removed.
+
+## 6.16.0 (2024-04-12)
+
+### New features
+
+The new `activateOnCompletion` option allows autocompletion to be configured to chain completion activation for some types of completions.
+
+## 6.15.0 (2024-03-13)
+
+### New features
+
+The new `filterStrict` option can be used to turn off fuzzy matching of completions.
+
+## 6.14.0 (2024-03-10)
+
+### New features
+
+Completion results can now define a `map` method that can be used to adjust position-dependent information for document changes.
+
+## 6.13.0 (2024-02-29)
+
+### New features
+
+Completions may now provide 'commit characters' that, when typed, commit the completion before inserting the character.
+
+## 6.12.0 (2024-01-12)
+
+### Bug fixes
+
+Make sure snippet completions also set `userEvent` to `input.complete`.
+
+Fix a crash when the editor lost focus during an update and autocompletion was active.
+
+Fix a crash when using a snippet that has only one field, but multiple instances of that field.
+
+### New features
+
+The new `activateOnTypingDelay` option allows control over the debounce time before the completions are queried when the user types.
+
+## 6.11.1 (2023-11-27)
+
+### Bug fixes
+
+Fix a bug that caused typing over closed brackets after pressing enter to still not work in many situations.
+
+## 6.11.0 (2023-11-09)
+
+### Bug fixes
+
+Fix an issue that would prevent typing over closed brackets after starting a new line with enter.
+
+### New features
+
+Additional elements rendered in completion options with `addToOptions` are now given access to the editor view.
+
+## 6.10.2 (2023-10-13)
+
+### Bug fixes
+
+Fix a bug that caused `updateSyncTime` to always delay the initial population of the tooltip.
+
+## 6.10.1 (2023-10-11)
+
+### Bug fixes
+
+Fix a bug where picking a selection with the mouse could use the wrong completion if the completion list was updated after being opened.
+
+## 6.10.0 (2023-10-11)
+
+### New features
+
+The new autocompletion configuration option `updateSyncTime` allows control over how long fast sources are held back waiting for slower completion sources.
+
+## 6.9.2 (2023-10-06)
+
+### Bug fixes
+
+Fix a bug in `completeAnyWord` that could cause it to generate invalid regular expressions and crash.
+
+## 6.9.1 (2023-09-14)
+
+### Bug fixes
+
+Make sure the cursor is scrolled into view after inserting completion text.
+
+Make sure scrolling completions into view doesn't get confused when the tooltip is scaled.
+
+## 6.9.0 (2023-07-18)
+
+### New features
+
+Completions may now provide a `displayLabel` property that overrides the way they are displayed in the completion list.
+
+## 6.8.1 (2023-06-23)
+
+### Bug fixes
+
+`acceptCompletion` now returns false (allowing other handlers to take effect) when the completion popup is open but disabled.
+
+## 6.8.0 (2023-06-12)
+
+### New features
+
+The result of `Completion.info` may now include a `destroy` method that will be called when the tooltip is removed.
+
+## 6.7.1 (2023-05-13)
+
+### Bug fixes
+
+Fix a bug that cause incorrect ordering of completions when some results covered input text and others didn't.
+
+## 6.7.0 (2023-05-11)
+
+### New features
+
+The new `hasNextSnippetField` and `hasPrevSnippetField` functions can be used to figure out if the snippet-field-motion commands apply to a given state.
+
+## 6.6.1 (2023-05-03)
+
+### Bug fixes
+
+Fix a bug that made the editor use the completion's original position, rather than its current position, when changes happened in the document while a result was active.
+
+## 6.6.0 (2023-04-27)
+
+### Bug fixes
+
+Fix a bug in `insertCompletionText` that caused it to replace the wrong range when a result set's `to` fell after the cursor.
+
+### New features
+
+Functions returned by `snippet` can now be called without a completion object.
+
+## 6.5.1 (2023-04-13)
+
+### Bug fixes
+
+Keep completions open when interaction with an info tooltip moves focus out of the editor.
+
+## 6.5.0 (2023-04-13)
+
+### Bug fixes
+
+When `closeBrackets` skips a bracket, it now generates a change that overwrites the bracket.
+
+Replace the entire selected range when picking a completion with a non-cursor selection active.
+
+### New features
+
+Completions can now provide a `section` field that is used to group them into sections.
+
+The new `positionInfo` option can be used to provide custom logic for positioning the info tooltips.
+
+## 6.4.2 (2023-02-17)
+
+### Bug fixes
+
+Fix a bug where the apply method created by `snippet` didn't add a `pickedCompletion` annotation to the transactions it created.
+
+## 6.4.1 (2023-02-14)
+
+### Bug fixes
+
+Don't consider node names in trees that aren't the same language as the one at the completion position in `ifIn` and `ifNotIn`.
+
+Make sure completions that exactly match the input get a higher score than those that don't (so that even if the latter has a score boost, it ends up lower in the list).
+
+## 6.4.0 (2022-12-14)
+
+### Bug fixes
+
+Fix an issue where the extension would sometimes try to draw a disabled dialog at an outdated position, leading to plugin crashes.
+
+### New features
+
+A `tooltipClass` option to autocompletion can now be used to add additional CSS classes to the completion tooltip.
+
+## 6.3.4 (2022-11-24)
+
+### Bug fixes
+
+Fix an issue where completion lists could end up being higher than the tooltip they were in.
+
+## 6.3.3 (2022-11-18)
+
+### Bug fixes
+
+Set an explicit `box-sizing` style on completion icons so CSS resets don't mess them up.
+
+Allow closing braces in templates to be escaped with a backslash.
+
+## 6.3.2 (2022-11-15)
+
+### Bug fixes
+
+Fix a regression that could cause the completion dialog to stick around when it should be hidden.
+
+## 6.3.1 (2022-11-14)
+
+### Bug fixes
+
+Fix a regression where transactions for picking a completion (without custom `apply` method) no longer had the `pickedCompletion` annotation.
+
+Reduce flickering for completion sources without `validFor` info by temporarily showing a disabled tooltip while the completion updates.
+
+Make sure completion info tooltips are kept within the space provided by the `tooltipSpace` option.
+
 ## 6.3.0 (2022-09-22)
 
 ### New features
