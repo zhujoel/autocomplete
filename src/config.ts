@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import {Completion, CompletionSource, Option} from "./completion"
+=======
+import {Completion, CompletionSource} from "./completion"
+>>>>>>> tags/6.18.4
 import {Info} from "./theme"
 import {Facet, combineConfig, EditorState} from "@codemirror/state"
 import {EditorView, Rect, Direction} from "@codemirror/view"
@@ -87,12 +91,15 @@ export interface CompletionConfig {
   /// presses made before the user is aware of the tooltip don't go to
   /// the tooltip. This option can be used to configure that delay.
   interactionDelay?: number
+<<<<<<< HEAD
   /// When enabled (defaults to true), autocompletion will start
   /// whenever the user clicks to move the cursor
   activateOnMouseClick?: boolean;
   /// When enabled (defaults to true), autocompletion will start
   /// whenever the user move the cursor with arrow keys
   activateOnKeyboardCursorMove?: boolean;
+=======
+>>>>>>> tags/6.18.4
   /// When there are multiple asynchronous completion sources, this
   /// controls how long the extension waits for a slow source before
   /// displaying results from faster sources. Defaults to 100

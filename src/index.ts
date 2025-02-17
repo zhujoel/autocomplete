@@ -10,8 +10,13 @@ import {defaultCompletionTooltip} from "./tooltip"
 
 export {snippet, snippetCompletion, nextSnippetField, prevSnippetField,
         hasNextSnippetField, hasPrevSnippetField, clearSnippet, snippetKeymap} from "./snippet"
+<<<<<<< HEAD
 export {Completion, CompletionInfo, CompletionSection, CompletionContext, CompletionSource, CompletionResult, 
         pickedCompletion, completeFromList, ifIn, ifNotIn, insertCompletionText, Option} from "./completion"
+=======
+export {Completion, CompletionInfo, CompletionSection, CompletionContext, CompletionSource, CompletionResult,
+        pickedCompletion, completeFromList, ifIn, ifNotIn, insertCompletionText} from "./completion"
+>>>>>>> tags/6.18.4
 export {startCompletion, closeCompletion, acceptCompletion, moveCompletionSelection} from "./view"
 export {completeAnyWord} from "./word"
 export {CloseBracketConfig, closeBrackets, closeBracketsKeymap, deleteBracketPair, insertBracket} from "./closebrackets"
@@ -21,7 +26,10 @@ export {completionTooltip} from "./tooltip"
 /// Returns an extension that enables autocompletion.
 export function autocompletion(config: CompletionConfig = {}): Extension {
   return [
+<<<<<<< HEAD
     defaultCompletionTooltip,
+=======
+>>>>>>> tags/6.18.4
     commitCharacters,
     completionState,
     completionConfig.of(config),

@@ -41,8 +41,11 @@ export interface Completion {
   ///
   /// Multiple types can be provided by separating them with spaces.
   type?: string
+<<<<<<< HEAD
   /// The data type of the completion. This is used to pick the icon in case the type is Property
   dataType?: string
+=======
+>>>>>>> tags/6.18.4
   /// When this option is selected, and one of these characters is
   /// typed, insert the completion before typing the character.
   commitCharacters?: readonly string[],

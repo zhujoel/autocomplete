@@ -1,5 +1,9 @@
 import {EditorView, ViewUpdate, logException, TooltipView, Rect} from "@codemirror/view"
+<<<<<<< HEAD
 import {StateField, EditorState, Facet} from "@codemirror/state"
+=======
+import {StateField, EditorState} from "@codemirror/state"
+>>>>>>> tags/6.18.4
 import {CompletionState} from "./state"
 import {completionConfig, CompletionConfig} from "./config"
 import {Option, Completion, CompletionInfo, closeCompletionEffect} from "./completion"
@@ -288,6 +292,7 @@ class CompletionTooltip {
   destroy() {
     this.destroyInfo()
   }
+<<<<<<< HEAD
 }
 interface CompletionTooltipBuilder {
   buildCompletionTooltip(stateField: StateField<CompletionState>,  view: EditorView, applyCompletion: (view: EditorView, option: Option) => void): TooltipView;
@@ -301,6 +306,14 @@ export const completionTooltip = Facet.define<CompletionTooltipBuilder, Completi
   combine: (values) => (values.length ? values[0] : defaultTooltipBuilder),
 });
 export const defaultCompletionTooltip = completionTooltip.of(defaultTooltipBuilder);
+=======
+}
+
+export function completionTooltip(stateField: StateField<CompletionState>,
+                                  applyCompletion: (view: EditorView, option: Option) => void) {
+  return (view: EditorView): TooltipView => new CompletionTooltip(view, stateField, applyCompletion)
+}
+>>>>>>> tags/6.18.4
 
 function scrollIntoView(container: HTMLElement, element: HTMLElement) {
   let parent = container.getBoundingClientRect()
