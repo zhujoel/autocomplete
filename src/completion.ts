@@ -5,6 +5,8 @@ import {SyntaxNode} from "@lezer/common"
 
 /// Objects type used to represent individual completions.
 export interface Completion {
+  /// Optional source Application to be displayed before the label, with a different style
+  sourceApp?: string
   /// The label to show in the completion picker. This is what input
   /// is matched against to determine whether a completion matches (and
   /// how well it matches).
@@ -39,6 +41,8 @@ export interface Completion {
   ///
   /// Multiple types can be provided by separating them with spaces.
   type?: string
+  /// The data type of the completion. This is used to pick the icon in case the type is Property
+  dataType?: string
   /// When this option is selected, and one of these characters is
   /// typed, insert the completion before typing the character.
   commitCharacters?: readonly string[],

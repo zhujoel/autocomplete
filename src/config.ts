@@ -1,4 +1,4 @@
-import {Completion, CompletionSource} from "./completion"
+import {Completion, CompletionSource, Option} from "./completion"
 import {Info} from "./theme"
 import {Facet, combineConfig, EditorState} from "@codemirror/state"
 import {EditorView, Rect, Direction} from "@codemirror/view"
@@ -34,6 +34,8 @@ export interface CompletionConfig {
   closeOnBlur?: boolean,
   /// The maximum number of options to render to the DOM.
   maxRenderedOptions?: number,
+  /// Override the default function to filter and sort options
+  optionFilterAndSort?: (options: Option[]) => Option[]
   /// Set this to false to disable the [default completion
   /// keymap](#autocomplete.completionKeymap). (This requires you to
   /// add bindings to control completion yourself. The bindings should
@@ -85,6 +87,12 @@ export interface CompletionConfig {
   /// presses made before the user is aware of the tooltip don't go to
   /// the tooltip. This option can be used to configure that delay.
   interactionDelay?: number
+  /// When enabled (defaults to true), autocompletion will start
+  /// whenever the user clicks to move the cursor
+  activateOnMouseClick?: boolean;
+  /// When enabled (defaults to true), autocompletion will start
+  /// whenever the user move the cursor with arrow keys
+  activateOnKeyboardCursorMove?: boolean;
   /// When there are multiple asynchronous completion sources, this
   /// controls how long the extension waits for a slow source before
   /// displaying results from faster sources. Defaults to 100
@@ -102,6 +110,7 @@ export const completionConfig = Facet.define<CompletionConfig, Required<Completi
       override: null,
       closeOnBlur: true,
       maxRenderedOptions: 100,
+      optionFilterAndSort: undefined,
       defaultKeymap: true,
       tooltipClass: () => "",
       optionClass: () => "",

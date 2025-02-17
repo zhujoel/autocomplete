@@ -45,22 +45,28 @@ function sortOptions(active: readonly ActiveSource[], state: EditorState) {
     }
   }
 
-  if (sections) {
-    let sectionOrder: {[name: string]: number} = Object.create(null), pos = 0
-    let cmp = (a: CompletionSection, b: CompletionSection) => (a.rank ?? 1e9) - (b.rank ?? 1e9) || (a.name < b.name ? -1 : 1)
-    for (let s of (sections as CompletionSection[]).sort(cmp)) {
-      pos -= 1e5
-      sectionOrder[s.name] = pos
+  const filterAndSort = state.facet(completionConfig).optionFilterAndSort;
+  if (filterAndSort) {
+    options = filterAndSort(options);
+  } else {
+    if (sections) {
+      let sectionOrder: {[name: string]: number} = Object.create(null), pos = 0
+      let cmp = (a: CompletionSection, b: CompletionSection) => (a.rank ?? 1e9) - (b.rank ?? 1e9) || (a.name < b.name ? -1 : 1)
+      for (let s of (sections as CompletionSection[]).sort(cmp)) {
+        pos -= 1e5
+        sectionOrder[s.name] = pos
+      }
+      for (let option of options) {
+        let {section} = option.completion
+        if (section) option.score += sectionOrder[typeof section == "string" ? section : section.name]
+      }
     }
-    for (let option of options) {
-      let {section} = option.completion
-      if (section) option.score += sectionOrder[typeof section == "string" ? section : section.name]
-    }
+    let compare = conf.compareCompletions;
+    options.sort((a, b) => b.score - a.score || compare(a.completion, b.completion));
   }
 
   let result = [], prev = null
-  let compare = conf.compareCompletions
-  for (let opt of options.sort((a, b) => (b.score - a.score) || compare(a.completion, b.completion))) {
+  for (let opt of options) {
     let cur = opt.completion
     if (!prev || prev.label != cur.label || prev.detail != cur.detail ||
         (prev.type != null && cur.type != null && prev.type != cur.type) ||
@@ -107,7 +113,7 @@ class CompletionDialog {
     }
     return new CompletionDialog(options, makeAttrs(id, selected), {
       pos: active.reduce((a, b) => b.hasResult() ? Math.min(a, b.from) : a, 1e8),
-      create: createTooltip,
+      create: createTooltip(state),
       above: conf.aboveCursor,
     }, prev ? prev.timestamp : Date.now(), selected, false)
   }
@@ -334,4 +340,4 @@ export function applyCompletion(view: EditorView, option: Option) {
   return true
 }
 
-const createTooltip = completionTooltip(completionState, applyCompletion)
+const createTooltip = (state) => (view) => state.facet(completionTooltip).buildCompletionTooltip(completionState, view, applyCompletion);
