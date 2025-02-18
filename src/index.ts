@@ -48,8 +48,7 @@ export const completionKeymap: readonly KeyBinding[] = [
   {key: "ArrowUp", run: moveCompletionSelection(false)},
   {key: "PageDown", run: moveCompletionSelection(true, "page")},
   {key: "PageUp", run: moveCompletionSelection(false, "page")},
-  {key: "Enter", run: acceptCompletion},
-  {key: "Tab", run: acceptCompletion}
+  {key: "Enter", run: acceptCompletion}
 ]
 
 const completionKeymapExt = Prec.highest(keymap.computeN([completionConfig], state => 
