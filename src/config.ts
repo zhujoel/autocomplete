@@ -34,8 +34,6 @@ export interface CompletionConfig {
   closeOnBlur?: boolean,
   /// The maximum number of options to render to the DOM.
   maxRenderedOptions?: number,
-  /// Override the default function to filter and sort options
-  optionFilterAndSort?: (options: Option[]) => Option[]
   /// Set this to false to disable the [default completion
   /// keymap](#autocomplete.completionKeymap). (This requires you to
   /// add bindings to control completion yourself. The bindings should
@@ -98,6 +96,8 @@ export interface CompletionConfig {
   /// displaying results from faster sources. Defaults to 100
   /// milliseconds.
   updateSyncTime?: number
+  /// The maximum number options available.
+  maxOptions?: number
 }
 
 export const completionConfig = Facet.define<CompletionConfig, Required<CompletionConfig>>({
@@ -110,7 +110,6 @@ export const completionConfig = Facet.define<CompletionConfig, Required<Completi
       override: null,
       closeOnBlur: true,
       maxRenderedOptions: 100,
-      optionFilterAndSort: undefined,
       defaultKeymap: true,
       tooltipClass: () => "",
       optionClass: () => "",
@@ -121,7 +120,8 @@ export const completionConfig = Facet.define<CompletionConfig, Required<Completi
       filterStrict: false,
       compareCompletions: (a, b) => a.label.localeCompare(b.label),
       interactionDelay: 75,
-      updateSyncTime: 100
+      updateSyncTime: 100,
+      maxOptions: undefined
     }, {
       defaultKeymap: (a, b) => a && b,
       closeOnBlur: (a, b) => a && b,

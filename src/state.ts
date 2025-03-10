@@ -45,28 +45,27 @@ function sortOptions(active: readonly ActiveSource[], state: EditorState) {
     }
   }
 
-  const filterAndSort = state.facet(completionConfig).optionFilterAndSort;
-  if (filterAndSort) {
-    options = filterAndSort(options);
-  } else {
-    if (sections) {
-      let sectionOrder: {[name: string]: number} = Object.create(null), pos = 0
-      let cmp = (a: CompletionSection, b: CompletionSection) => (a.rank ?? 1e9) - (b.rank ?? 1e9) || (a.name < b.name ? -1 : 1)
-      for (let s of (sections as CompletionSection[]).sort(cmp)) {
-        pos -= 1e5
-        sectionOrder[s.name] = pos
-      }
-      for (let option of options) {
-        let {section} = option.completion
-        if (section) option.score += sectionOrder[typeof section == "string" ? section : section.name]
-      }
+  if (sections) {
+    let sectionOrder: {[name: string]: number} = Object.create(null), pos = 0
+    let cmp = (a: CompletionSection, b: CompletionSection) => (a.rank ?? 1e9) - (b.rank ?? 1e9) || (a.name < b.name ? -1 : 1)
+    for (let s of (sections as CompletionSection[]).sort(cmp)) {
+      pos -= 1e5
+      sectionOrder[s.name] = pos
     }
-    let compare = conf.compareCompletions;
-    options.sort((a, b) => b.score - a.score || compare(a.completion, b.completion));
+    for (let option of options) {
+      let {section} = option.completion
+      if (section) option.score += sectionOrder[typeof section == "string" ? section : section.name]
+    }
   }
 
   let result = [], prev = null
-  for (let opt of options) {
+  let compare = conf.compareCompletions
+  const maxOptions = state.facet(completionConfig).maxOptions;
+
+  for (let opt of options.sort((a, b) => (b.score - a.score) || compare(a.completion, b.completion))) {
+    if (result.length == maxOptions) {
+      break;
+    }
     let cur = opt.completion
     if (!prev || prev.label != cur.label || prev.detail != cur.detail ||
         (prev.type != null && cur.type != null && prev.type != cur.type) ||
